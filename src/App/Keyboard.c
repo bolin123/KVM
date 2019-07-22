@@ -1,4 +1,5 @@
 #include "Keyboard.h"
+#include "Sys.h"
 
 #define KEYBOARD_PREAMBLE_CODE1 0x57
 #define KEYBOARD_PREAMBLE_CODE2 0xAB
@@ -40,6 +41,7 @@ static void parseKey(uint8_t *code)
 	{
 		if(memcmp(g_usbcode[i], code, KEYBOARD_USBCODE_LEN) == 0)
 		{
+		    SysLog("got key");
 			gotkey = true;
 			break;
 		}	
@@ -53,20 +55,28 @@ static void parseKey(uint8_t *code)
 	switch (i)
 	{
 	case KB_KEY_LCTRL:
+	    SysPrint("Left ctrl\n");
 		break;
 	case KB_KEY_RCTRL:
+	    SysPrint("Right ctrl\n");
 		break;
 	case KB_KEY_UP:
+        SysPrint("Up\n");
 		break;
 	case KB_KEY_DOWN:
+	    SysPrint("Down\n");
 		break;
 	case KB_KEY_LEFT:
+	    SysPrint("Left\n");
 		break;
 	case KB_KEY_RIGHT:
+	    SysPrint("Right\n");
 		break;
 	case KB_KEY_ENTER1:
+	    SysPrint("Enter1\n");
 		break;
 	case KB_KEY_ENTER2:
+	    SysPrint("Enter2\n");
 		break;
 	default:
 		break;
@@ -111,6 +121,13 @@ void KeyboardDataRecv(uint8_t *data, uint16_t len)
 
 void KeyboardInit(void)
 {
+    HalUartConfig_t config;
+    config.baudrate = 115200;
+    config.flowControl = 0;
+    config.parity = 1;
+    config.wordLength = USART_WordLength_8b;
+    config.recvCb = KeyboardDataRecv;
+    HalUartConfig(HAL_UART_PORT_KVM1KEY, &config);
 }
 
 void KeyboardPoll(void)

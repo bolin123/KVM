@@ -12,35 +12,17 @@ typedef struct
     uint8_t data[];
 }Protocol_t;
 
-typedef enum
-{
-    PROTO_CMD_PRINTER_SET = 1,
-    PROTO_CMD_PRINTER_GET,
-    PROTO_CMD_DISPLAY_SET,
-    PROTO_CMD_DISPLAY_GET,
-    PROTO_CMD_SOUND_SET,
-    PROTO_CMD_SOUND_GET,
-    PROTO_CMD_KVM_SWITCH,
-    PROTO_CMD_KEYBOARD_CODE,
-}ProtocolCmd_t;
-
-typedef enum
-{
-    PROTO_DIR_MASTER_REQUEST = 0,
-    PROTO_DIR_SLAVE_REPLY,
-}ProtocolDir_t;
-
 static uint8_t g_pbuff[512];
 static uint16_t g_pbuffCount = 0; 
+static ProtocolEventHandle g_protoEventHandle = NULL;
 
 static uint8_t checkSum(uint8_t *data, uint16_t len)
 {
     return 0;
 }
 
-static void protocolDataSend(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uint8_t dlen)
+int ProtocolDataToFrame(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uint8_t dlen, uint8_t *buff)
 {
-    uint8_t buff[512];
     Protocol_t *proto = (Protocol_t *)buff;
 
     proto->head[0] = PROTOCOL_PREAMBLE_HEAD;
@@ -50,16 +32,21 @@ static void protocolDataSend(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data
     proto->dir = dir;
     memcpy(proto->data, data, dlen);
     buff[dlen + sizeof(Protocol_t)] = checkSum(&buff[2], dlen + 3);
-    HalUartWrite(HAL_UART_PORT_PRINT, buff, dlen + sizeof(Protocol_t) + 1);
+    return (dlen + sizeof(Protocol_t) + 1);
 }
 
-static void protocolParse(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uint8_t dlen)
+static void protocolParse(ProtocolDevID_t id, ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uint8_t dlen)
 {
     SysLog("cmd = %d", cmd);
-    if(dir == PROTO_DIR_MASTER_REQUEST)
+
+    if(g_protoEventHandle)
     {
-        switch (cmd)
-        {
+        g_protoEventHandle(id, cmd, dir, data, dlen);
+    }
+    
+#if 0
+    switch (cmd)
+    {
         case PROTO_CMD_PRINTER_SET:
         break;
         case PROTO_CMD_PRINTER_GET:
@@ -78,55 +65,59 @@ static void protocolParse(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, u
         break;
         default:
         break;
+    }
+#endif    
+}
+
+void ProtocolRecvByte(ProtocolDev_t *dev, uint8_t data)
+{
+    uint16_t i;
+
+    if(dev != NULL)
+    {
+        if(SysTimeHasPast(dev->lastTime, 100))
+        {
+            dev->frameCount = 0;
         }
-        uint8_t reply = 0x01;
-        protocolDataSend(cmd, PROTO_DIR_SLAVE_REPLY, &reply, 1);
+        dev->lastTime = SysTime();
+        dev->frameBuff[dev->frameCount++] = data;
+
+        if(dev->frameCount == 1)
+        {
+            if(data != PROTOCOL_PREAMBLE_HEAD)
+            {
+                dev->frameCount = 0;
+            }
+        }
+        else if(dev->frameCount == 2)
+        {
+            if(data != PROTOCOL_PREAMBLE_HEAD)
+            {
+                dev->frameCount = 0;
+            }
+        }
+        else if(dev->frameCount == 3)
+        {
+            dev->datalength  = data;
+        }
+        else if(dev->frameCount == dev->datalength + 3) //got a packet
+        {
+            if(checkSum(&dev->frameBuff[2], dev->frameCount - 2) == data)
+            {
+                Protocol_t *proto = (Protocol_t *)dev->frameBuff;
+                protocolParse((ProtocolCmd_t)proto->cmd, (ProtocolDir_t)proto->dir, proto->data, proto->length - 3);
+            }
+            dev->datalength = 0;
+            dev->frameCount = 0;
+        }
     }
     
 }
 
-void ProtocolDataRecv(uint8_t *data, uint16_t length)
+void ProtocolInit(ProtocolEventHandle eventHandle)
 {
-    uint16_t i;
-    static uint16_t packetlen = 0;
-
-    for(i = 0; i < length; i++)
-    {
-        g_pbuff[g_pbuffCount++] = data[i];
-
-        if(g_pbuffCount == 1)
-        {
-            if(data[i] != PROTOCOL_PREAMBLE_HEAD)
-            {
-                g_pbuffCount = 0;
-            }
-        }
-        else if(g_pbuffCount == 2)
-        {
-            if(data[i] != PROTOCOL_PREAMBLE_HEAD)
-            {
-                g_pbuffCount = 0;
-            }
-        }
-        else if(g_pbuffCount == 3)
-        {
-            packetlen  = data[i];
-        }
-        else if(g_pbuffCount == packetlen + 3) //got a packet
-        {
-            if(checkSum(&g_pbuff[2], g_pbuffCount - 2) == data[i])
-            {
-                Protocol_t *proto = (Protocol_t *)g_pbuff;
-                protocolParse((ProtocolCmd_t)proto->cmd, (ProtocolDir_t)proto->dir, proto->data, proto->length - 3);
-            }
-            packetlen = 0;
-            g_pbuffCount = 0;
-        }
-    }
-}
-
-void ProtocolInit(void)
-{
+    g_protoEventHandle = eventHandle;
+/*
     HalUartConfig_t config;
     config.baudrate = 9600;
     config.flowControl = 0;
@@ -134,6 +125,7 @@ void ProtocolInit(void)
     config.wordLength = USART_WordLength_8b;
     config.recvCb = ProtocolDataRecv;
     HalUartConfig(HAL_UART_PORT_PRINT, &config);
+*/
 }
 
 void ProtocolPoll(void)

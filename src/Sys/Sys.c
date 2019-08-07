@@ -2,6 +2,7 @@
 #include "Hal.h"
 #include "KVM.h"
 
+
 static void printChars(void)
 {
     SysPrint("\n");
@@ -11,6 +12,7 @@ static void printChars(void)
     SysPrint("***********************************************\n");
     SysPrint("---------------------start---------------------\n");
 }
+
 
 void SysInit(void)
 {

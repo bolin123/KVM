@@ -20,6 +20,8 @@ typedef enum
 
 static uint8_t g_keyBuff[64];
 static uint8_t g_keyBuffCount = 0;
+static volatile bool g_gotframe = false;
+static KeyboardKeyHandle_t g_keyHandle = NULL;
 
 static uint8_t g_usbcode[KB_KEY_COUNT][KEYBOARD_USBCODE_LEN] = {
 	{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -32,10 +34,20 @@ static uint8_t g_usbcode[KB_KEY_COUNT][KEYBOARD_USBCODE_LEN] = {
 	{0x00, 0x00, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00},
 };
 
+static void keyEvent(KeyboardKey_t key)
+{
+    if(g_keyHandle)
+    {
+        g_keyHandle(key);
+    }
+}
+
 static void parseKey(uint8_t *code)
 {
 	uint8_t i;
 	bool gotkey = false;
+    static SysTime_t lastCtrlTime;
+    static bool ctrlPressed = false;
 
 	for(i = 0; i < KB_KEY_COUNT; i++)
 	{
@@ -55,37 +67,54 @@ static void parseKey(uint8_t *code)
 	switch (i)
 	{
 	case KB_KEY_LCTRL:
-	    SysPrint("Left ctrl\n");
-		break;
-	case KB_KEY_RCTRL:
-	    SysPrint("Right ctrl\n");
+    case KB_KEY_RCTRL:
+        if(ctrlPressed && !SysTimeHasPast(lastCtrlTime, 1000))
+        {
+            keyEvent(KEYBOARD_KEY_ACTIVE);
+            ctrlPressed = false;
+        }
+        else
+        {
+            ctrlPressed = true;
+        }
+        lastCtrlTime = SysTime();
 		break;
 	case KB_KEY_UP:
-        SysPrint("Up\n");
+        keyEvent(KEYBOARD_KEY_UP);
 		break;
 	case KB_KEY_DOWN:
-	    SysPrint("Down\n");
+        keyEvent(KEYBOARD_KEY_DOWN);
 		break;
 	case KB_KEY_LEFT:
-	    SysPrint("Left\n");
+        keyEvent(KEYBOARD_KEY_LEFT);
 		break;
 	case KB_KEY_RIGHT:
-	    SysPrint("Right\n");
+        keyEvent(KEYBOARD_KEY_RIGHT);
 		break;
 	case KB_KEY_ENTER1:
-	    SysPrint("Enter1\n");
-		break;
 	case KB_KEY_ENTER2:
-	    SysPrint("Enter2\n");
+        keyEvent(KEYBOARD_KEY_ENTER);
 		break;
 	default:
 		break;
 	}
 }
 
-void KeyboardDataRecv(uint8_t *data, uint16_t len)
+void KeyboardDataRecv(uint8_t uart, uint8_t *data, uint16_t len)
 {
 	uint16_t i;
+    static SysTime_t oldtime;
+
+    if(g_gotframe)
+    {
+        return ;
+    }
+
+    if(SysTimeHasPast(oldtime, 100))
+    {
+        g_keyBuffCount = 0;
+    }
+    oldtime = SysTime();
 
 	for(i = 0; i < len; i++)
 	{
@@ -113,13 +142,23 @@ void KeyboardDataRecv(uint8_t *data, uint16_t len)
 		}
 		else if(g_keyBuffCount == 11)
 		{
-			parseKey(&g_keyBuff[3]);
+			//parseKey(&g_keyBuff[3]);
+			g_gotframe = true;
 			g_keyBuffCount = 0;
 		}
 	}
 }
 
-void KeyboardInit(void)
+static void frameHandle(void)
+{
+    if(g_gotframe)
+    {
+        parseKey(&g_keyBuff[3]);
+        g_gotframe = false;
+    }
+}
+
+void KeyboardInit(KeyboardKeyHandle_t handle)
 {
     HalUartConfig_t config;
     config.baudrate = 115200;
@@ -128,9 +167,12 @@ void KeyboardInit(void)
     config.wordLength = USART_WordLength_8b;
     config.recvCb = KeyboardDataRecv;
     HalUartConfig(HAL_UART_PORT_KVM1KEY, &config);
+
+    g_keyHandle = handle;
 }
 
 void KeyboardPoll(void)
 {
+    frameHandle();
 }
 

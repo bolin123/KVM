@@ -13,7 +13,7 @@ typedef enum
     HAL_UART_COUNT,
 }HalUartPort_t;
 #endif
-typedef void (* HalUartDataRecv_cb)(uint8_t uart, uint8_t *data, uint16_t len);
+typedef void (* HalUartDataRecv_cb)(uint8_t *data, uint16_t len);
 
 typedef struct
 {

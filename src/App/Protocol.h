@@ -1,16 +1,18 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include "Sys.h"
+
 typedef enum
 {
     PROTO_CMD_PRINTER_SET = 1,
-    PROTO_CMD_PRINTER_GET,
-    PROTO_CMD_DISPLAY_SET,
-    PROTO_CMD_DISPLAY_GET,
-    PROTO_CMD_SOUND_SET,
-    PROTO_CMD_SOUND_GET,
-    PROTO_CMD_KVM_SWITCH,
-    PROTO_CMD_KEYBOARD_CODE,
+    PROTO_CMD_PRINTER_GET, //2
+    PROTO_CMD_DISPLAY_SET, //3
+    PROTO_CMD_DISPLAY_GET, //4
+    PROTO_CMD_SOUND_SET,   //5
+    PROTO_CMD_SOUND_GET,   //6
+    PROTO_CMD_KVM_SWITCH,  //7
+    PROTO_CMD_KEYBOARD_CODE, //8
 }ProtocolCmd_t;
 
 typedef enum
@@ -43,7 +45,7 @@ typedef void (*ProtocolEventHandle)(ProtocolDevID_t id, ProtocolCmd_t cmd, Proto
 int ProtocolDataToFrame(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uint8_t dlen, uint8_t *buff);
 void ProtocolRecvByte(ProtocolDev_t *dev, uint8_t data);
 void ProtocolPoll(void);
-void ProtocolInit(void);
+void ProtocolInit(ProtocolEventHandle eventHandle);
 
 #endif
 

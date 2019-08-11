@@ -53,6 +53,18 @@ static void logPrintInit(void)
     HalUartConfig(HAL_UART_PORT_DBG, &config);
 }
 
+void HalIRQEnable(bool enable)
+{
+    if(enable)
+    {
+        __enable_irq() ; //打开总中断
+    }
+    else
+    {
+        __disable_irq() ; //关闭总中断
+    }
+}
+
 void HalReboot(void)
 {
 	printf("Sys reboot!!!\n");
@@ -67,6 +79,7 @@ void HalInit(void)
 	HalGPIOInitialize();
 	HalUartInitialize();
 	HalTimerInitialize();
+    HalI2CInit();
 	//HalExtiInit();
 	logPrintInit();
 }

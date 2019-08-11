@@ -1,5 +1,4 @@
 #include "Protocol.h"
-#include "Sys.h"
 
 #define PROTOCOL_PREAMBLE_HEAD 0x7E
 
@@ -12,8 +11,6 @@ typedef struct
     uint8_t data[];
 }Protocol_t;
 
-static uint8_t g_pbuff[512];
-static uint16_t g_pbuffCount = 0; 
 static ProtocolEventHandle g_protoEventHandle = NULL;
 
 static uint8_t checkSum(uint8_t *data, uint16_t len)
@@ -28,7 +25,7 @@ int ProtocolDataToFrame(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uin
     proto->head[0] = PROTOCOL_PREAMBLE_HEAD;
     proto->head[1] = PROTOCOL_PREAMBLE_HEAD;
     proto->length = dlen + 3;
-    proto->cmd = cmd;
+    proto->cmd = (uint8_t)cmd;
     proto->dir = dir;
     memcpy(proto->data, data, dlen);
     buff[dlen + sizeof(Protocol_t)] = checkSum(&buff[2], dlen + 3);
@@ -71,9 +68,9 @@ static void protocolParse(ProtocolDevID_t id, ProtocolCmd_t cmd, ProtocolDir_t d
 
 void ProtocolRecvByte(ProtocolDev_t *dev, uint8_t data)
 {
-    uint16_t i;
+//    uint16_t i;
 
-    if(dev != NULL)
+    if(dev != NULL)
     {
         if(SysTimeHasPast(dev->lastTime, 100))
         {
@@ -105,7 +102,7 @@ void ProtocolRecvByte(ProtocolDev_t *dev, uint8_t data)
             if(checkSum(&dev->frameBuff[2], dev->frameCount - 2) == data)
             {
                 Protocol_t *proto = (Protocol_t *)dev->frameBuff;
-                protocolParse((ProtocolCmd_t)proto->cmd, (ProtocolDir_t)proto->dir, proto->data, proto->length - 3);
+                protocolParse(dev->devid, (ProtocolCmd_t)proto->cmd, (ProtocolDir_t)proto->dir, proto->data, proto->length - 3);
             }
             dev->datalength = 0;
             dev->frameCount = 0;

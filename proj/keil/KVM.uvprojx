@@ -52,7 +52,7 @@
           <OutputName>KVM</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
-          <CreateHexFile>0</CreateHexFile>
+          <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\Listings\</ListingPath>
@@ -451,6 +451,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\src\Hal\HalWait.c</FilePath>
             </File>
+            <File>
+              <FileName>HalI2C.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\src\Hal\HalI2C.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -475,6 +480,16 @@
               <FileName>Protocol.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\src\App\Protocol.c</FilePath>
+            </File>
+            <File>
+              <FileName>DisplayCtrl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\src\App\DisplayCtrl.c</FilePath>
+            </File>
+            <File>
+              <FileName>SwitchBoard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\src\App\SwitchBoard.c</FilePath>
             </File>
           </Files>
         </Group>

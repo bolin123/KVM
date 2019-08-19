@@ -15,6 +15,11 @@
                     }while(0)
 
 
+uint8_t SysErrcodeGet(void);
+void SysErrcodeSet(bool set, uint8_t err);
+
+void SysFlashWrite(uint32_t addr, uint8_t *buff, uint16_t size);
+void SysFlashRead(uint32_t addr, uint8_t *buff, uint16_t size);
 void SysInit(void);
 void SysPoll(void);
 

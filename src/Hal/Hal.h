@@ -7,6 +7,7 @@
 #include "HalUart.h"
 #include "HalExti.h"
 #include "HalI2C.h"
+#include "HalFlash.h"
 
 typedef enum
 {
@@ -24,6 +25,8 @@ typedef enum
 #define HAL_PRINTER_IO_C2 0x44 //pe4
 
 #define HAL_FPGA_IIC_ADDR 0x90
+
+#define HAL_FLASH_ADDR_CONFIGS 0x8010000 // 64k
 
 void HalIRQEnable(bool enable);
 uint32_t HalTimerCount(void);

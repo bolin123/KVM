@@ -13,6 +13,8 @@ typedef enum
     PROTO_CMD_SOUND_GET,   //6
     PROTO_CMD_KVM_SWITCH,  //7
     PROTO_CMD_KEYBOARD_CODE, //8
+    PROTO_CMD_KVMERROR_GET, //9
+    PROTO_CMD_AVMERROR_GET, //10
 }ProtocolCmd_t;
 
 typedef enum

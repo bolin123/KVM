@@ -38,6 +38,16 @@ static void swtichProtoHandle(void)
     }
 }
 
+void SwitchBoardGetError(void)
+{
+    uint8_t buff[16];
+    uint8_t length;
+    uint8_t data = 0x00;
+    
+    length = ProtocolDataToFrame(PROTO_CMD_AVMERROR_GET, PROTO_DIR_FROM_MASTER, &data, 1, buff);
+    lowSend(buff, length);
+}
+
 void SwitchBoardDataSend(uint8_t cmd, uint8_t *data, uint16_t len)
 {
     uint8_t buff[64];

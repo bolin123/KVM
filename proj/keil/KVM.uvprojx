@@ -456,6 +456,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\src\Hal\HalI2C.c</FilePath>
             </File>
+            <File>
+              <FileName>HalFlash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\src\Hal\HalFlash.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

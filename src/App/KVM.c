@@ -258,6 +258,7 @@ static void kvmProtoHandle(ProtocolDevID_t id, ProtocolCmd_t cmd, ProtocolDir_t 
         if(cmd == PROTO_CMD_AVMERROR_GET)
         {
             g_avmErrcode = data[0];
+            SysPrint("avm errcode = %d\n", g_avmErrcode);
         }
         else if(cmd == PROTO_CMD_KEYBOARD_CODE)
         {

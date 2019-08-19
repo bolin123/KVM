@@ -15,7 +15,14 @@ static ProtocolEventHandle g_protoEventHandle = NULL;
 
 static uint8_t checkSum(uint8_t *data, uint16_t len)
 {
-    return 0;
+    uint16_t i;
+    uint8_t sum = 0;
+
+    for(i = 0; i < len; i++)
+    {
+        sum += data[i];
+    }
+    return sum;
 }
 
 int ProtocolDataToFrame(ProtocolCmd_t cmd, ProtocolDir_t dir, uint8_t *data, uint8_t dlen, uint8_t *buff)

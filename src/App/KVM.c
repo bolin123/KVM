@@ -105,11 +105,12 @@ static void setPrinterConnect(KVMSrcDevice_t connect)
     
 }
 
-/*FPGA i2c设置*/
-static void fpgaCtrl(KVMDstDeivce_t dst, KVMSrcDevice_t src)
+/*键盘等输入设备切换设置*/
+static void inputSwitchControl(KVMDstDeivce_t dst, KVMSrcDevice_t src)
 {
-    uint8_t reg;
+#if defined(HAL_OLD_KVM_BOARD)
     
+    uint8_t reg;
     if(dst == KVM_DST_DEVICE_KVM1)
     {
         reg = 0x03;
@@ -134,6 +135,72 @@ static void fpgaCtrl(KVMDstDeivce_t dst, KVMSrcDevice_t src)
         HalI2CWriteByte(HAL_FPGA_IIC_ADDR, reg, 0); //不与任何主机连接
         SysPrint("reg %02x = %02x", reg, HalI2CReadByte(HAL_FPGA_IIC_ADDR, reg));
     }
+#else
+    uint8_t kvm1IO[4] = {0x4f, 0x4c, 0x4d, 0x4e};
+    uint8_t kvm2IO[4] = {0x07, 0x04, 0x05, 0x06};
+    uint8_t lcdIO[4]  = {0x11, 0x24, 0x25, 0x10};
+    uint8_t *io;
+    if(dst == KVM_DST_DEVICE_KVM1)
+    {
+        io = kvm1IO;
+    }
+    else if(KVM_DST_DEVICE_KVM2 == dst)
+    {
+        io = kvm2IO;
+    }
+    else
+    {
+        io = lcdIO;
+    }
+
+    switch(src)
+    {
+
+    case KVM_SRC_DEVICE_NONE:
+    case KVM_SRC_DEVICE_UAV:
+    case KVM_SRC_DEVICE_DECODER:
+        HalGPIOSetLevel(io[0], 0);
+        break;
+    case KVM_SRC_DEVICE_PC1:
+        HalGPIOSetLevel(io[0], 1);
+        HalGPIOSetLevel(io[1], 1);
+        HalGPIOSetLevel(io[2], 0);
+        HalGPIOSetLevel(io[3], 1);
+        break;
+    case KVM_SRC_DEVICE_PC2:
+        HalGPIOSetLevel(io[0], 1);
+        HalGPIOSetLevel(io[1], 1);
+        HalGPIOSetLevel(io[2], 0);
+        HalGPIOSetLevel(io[3], 0);
+        break;
+    case KVM_SRC_DEVICE_PC3:
+        HalGPIOSetLevel(io[0], 1);
+        HalGPIOSetLevel(io[1], 0);
+        HalGPIOSetLevel(io[2], 1);
+        HalGPIOSetLevel(io[3], 0);
+        break;
+    case KVM_SRC_DEVICE_PC4:
+        HalGPIOSetLevel(io[0], 1);
+        HalGPIOSetLevel(io[1], 0);
+        HalGPIOSetLevel(io[2], 1);
+        HalGPIOSetLevel(io[3], 1);
+        break;
+    case KVM_SRC_DEVICE_CLIENT:
+        HalGPIOSetLevel(io[0], 1);
+        HalGPIOSetLevel(io[1], 0);
+        HalGPIOSetLevel(io[2], 0);
+        HalGPIOSetLevel(io[3], 1);
+        break;
+    case KVM_SRC_DEVICE_BM:
+        HalGPIOSetLevel(io[0], 1);
+        HalGPIOSetLevel(io[1], 0);
+        HalGPIOSetLevel(io[2], 0);
+        HalGPIOSetLevel(io[3], 0);
+        break;
+    default:
+        break;
+    }
+#endif
 }
 
 static void kvmKeyHandle(KeyboardID_t id, KeyboardKey_t key)
@@ -192,7 +259,7 @@ static void kvmProtoHandle(ProtocolDevID_t id, ProtocolCmd_t cmd, ProtocolDir_t 
             cid = data[0] - 1; //dst 1~3
             if(cid < 3)
             {
-                fpgaCtrl((KVMDstDeivce_t)data[0], (KVMSrcDevice_t)data[1]);
+                inputSwitchControl((KVMDstDeivce_t)data[0], (KVMSrcDevice_t)data[1]);
                 SwitchBoardDataSend(cmd, data, dlen);
                 SysFlashRead(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
                 config.dstConnect[cid] = data[1];
@@ -266,11 +333,11 @@ static void kvmProtoHandle(ProtocolDevID_t id, ProtocolCmd_t cmd, ProtocolDir_t 
             {
                 SysFlashRead(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
                 config.dstConnect[0] = data[2]; //kvm1
-                fpgaCtrl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)data[2]);
+                inputSwitchControl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)data[2]);
                 config.dstConnect[1] = data[3]; //kvm2
-                fpgaCtrl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)data[3]);
+                inputSwitchControl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)data[3]);
                 config.dstConnect[2] = data[4]; //lcd
-                fpgaCtrl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)data[3]);
+                inputSwitchControl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)data[3]);
 
                 config.soundConnect  = data[5]; //box
                 config.flag = KVM_CONFIG_VALID_FLAG;
@@ -312,6 +379,8 @@ static void checkKVMConfigs(void)
     {
         setKVMFactoryConfig();
     }
+
+    //todo switch
 }
 
 void KVMInit(void)

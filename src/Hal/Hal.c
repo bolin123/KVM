@@ -57,11 +57,11 @@ void HalIRQEnable(bool enable)
 {
     if(enable)
     {
-        __enable_irq() ; //打开总中断
+        __enable_irq();
     }
     else
     {
-        __disable_irq() ; //关闭总中断
+        __disable_irq(); 
     }
 }
 
@@ -72,6 +72,31 @@ void HalReboot(void)
     NVIC_SystemReset();
 }
 
+#if !defined(HAL_OLD_KVM_BOARD)
+static void inputSwitchIOInit(void)
+{
+    HalGPIOConfig(0x4c, HAL_IO_OUTPUT); //pe12
+    HalGPIOConfig(0x4d, HAL_IO_OUTPUT); //pe13
+    HalGPIOConfig(0x4e, HAL_IO_OUTPUT); //pe14
+    HalGPIOConfig(0x4f, HAL_IO_OUTPUT); //pe15
+
+    HalGPIOConfig(0x04, HAL_IO_OUTPUT); //pa4
+    HalGPIOConfig(0x05, HAL_IO_OUTPUT); //pa5
+    HalGPIOConfig(0x06, HAL_IO_OUTPUT); //pa6
+    HalGPIOConfig(0x07, HAL_IO_OUTPUT); //pa6
+    
+    HalGPIOConfig(0x11, HAL_IO_OUTPUT); //pb1
+    HalGPIOConfig(0x10, HAL_IO_OUTPUT); //pb0
+    HalGPIOConfig(0x24, HAL_IO_OUTPUT); //pc4
+    HalGPIOConfig(0x25, HAL_IO_OUTPUT); //pc5
+
+    
+    HalGPIOSetLevel(0x4f, 0);
+    HalGPIOSetLevel(0x11, 0);
+    HalGPIOSetLevel(0x07, 0);
+}
+#endif
+
 void HalInit(void)
 {
 	SystemInit();
@@ -79,7 +104,11 @@ void HalInit(void)
 	HalGPIOInitialize();
 	HalUartInitialize();
 	HalTimerInitialize();
+#if defined(HAL_OLD_KVM_BOARD)
     HalI2CInit();
+#else
+    inputSwitchIOInit();
+#endif
 	//HalExtiInit();
 	logPrintInit();
 }

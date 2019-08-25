@@ -7,6 +7,7 @@
 #include "HalUart.h"
 #include "HalExti.h"
 #include "HalI2C.h"
+#include "HalWait.h"
 #include "HalFlash.h"
 
 //#define HAL_OLD_KVM_BOARD //old

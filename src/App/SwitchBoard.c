@@ -84,6 +84,9 @@ void SwitchBoardInit(void)
     g_sprotoDevice.devid = PROTOCOL_DEVID_SWITCH;
     g_sprotoDevice.frameCount = 0;
     g_sprotoDevice.datalength = 0;
+
+    uint8_t dump = 0xff;
+    HalUartWrite(HAL_UART_PORT_SWITCH, &dump, 1);
 }
 
 void SwitchBoardPoll(void)

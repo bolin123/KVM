@@ -36,20 +36,13 @@ typedef struct
 {
     uint8_t flag; //有效标志位，0xa5
     uint8_t printerConnect; //打印机连接
-    uint8_t dstConnect[3];  //主机连接
+    uint8_t dstConnect[3];  //主机连接 0=KVM1,1=KVM2,2=LCD
     uint8_t soundConnect;   //音响连接
 }KVMConfig_t;
 
 static uint8_t g_avmErrcode = 1;
-
-static void setKVMFactoryConfig(void)
-{
-    KVMConfig_t config;
-    SysLog("");
-    memset(&config, 0, sizeof(KVMConfig_t)); //全部断开
-    config.flag = KVM_CONFIG_VALID_FLAG;
-    SysFlashWrite(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
-}
+static bool g_kvm1DuCtrlFlag = false;
+static bool g_kvm2DuCtrlFlag = false;
 
 /*设置打印机连接*/
 static void setPrinterConnect(KVMSrcDevice_t connect)
@@ -203,10 +196,36 @@ static void inputSwitchControl(KVMDstDeivce_t dst, KVMSrcDevice_t src)
 #endif
 }
 
+static void setKVMFactoryConfig(void)
+{
+    KVMConfig_t config;
+    SysLog("");
+    memset(&config, 0, sizeof(KVMConfig_t)); //全部断开
+    config.flag = KVM_CONFIG_VALID_FLAG;
+    SysFlashWrite(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
+    
+    //hardware config
+    inputSwitchControl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)config.dstConnect[0]);
+    inputSwitchControl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)config.dstConnect[1]);
+    inputSwitchControl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)config.dstConnect[2]);
+    setPrinterConnect((KVMSrcDevice_t)config.printerConnect);
+}
+
 static void kvmKeyHandle(KeyboardID_t id, KeyboardKey_t key)
 {
     SysLog("key = %d, id = %d", key, id);
     SwitchBoardSendKeyValue((uint8_t)id, (uint8_t)key);
+    if(key == KEYBOARD_KEY_DOUBLE_CTRL)
+    {
+        if(id == KEYBOARD_ID_KVM1)
+        {
+            g_kvm1DuCtrlFlag = true;
+        }
+        else
+        {
+            g_kvm2DuCtrlFlag = true;
+        }
+    }
 }
 
 static void kvmConfig(uint8_t cmd)
@@ -329,19 +348,44 @@ static void kvmProtoHandle(ProtocolDevID_t id, ProtocolCmd_t cmd, ProtocolDir_t 
         }
         else if(cmd == PROTO_CMD_KEYBOARD_CODE)
         {
-            if(data[0] == 0x00 && data[1] == 0x00) //配置有效,菜单处于关闭状态
+            if(data[1] == 0x00) //菜单处于关闭状态
             {
                 SysFlashRead(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
-                config.dstConnect[0] = data[2]; //kvm1
-                inputSwitchControl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)data[2]);
-                config.dstConnect[1] = data[3]; //kvm2
-                inputSwitchControl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)data[3]);
-                config.dstConnect[2] = data[4]; //lcd
-                inputSwitchControl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)data[3]);
+                if(data[0] == 0x00)//配置有效
+                {
+                    config.dstConnect[0] = data[2]; //kvm1
+                    inputSwitchControl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)data[2]);
+                    config.dstConnect[1] = data[3]; //kvm2
+                    inputSwitchControl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)data[3]);
+                    config.dstConnect[2] = data[4]; //lcd
+                    inputSwitchControl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)data[3]);
 
-                config.soundConnect  = data[5]; //box
-                config.flag = KVM_CONFIG_VALID_FLAG;
-                SysFlashWrite(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
+                    config.soundConnect  = data[5]; //box
+                    config.flag = KVM_CONFIG_VALID_FLAG;
+                    SysFlashWrite(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
+                }
+                else
+                {
+                    inputSwitchControl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)config.dstConnect[0]);
+                    inputSwitchControl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)config.dstConnect[1]);
+                    inputSwitchControl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)config.dstConnect[2]);
+                }
+                
+            }
+            else //菜单打开
+            {
+                if(g_kvm1DuCtrlFlag)
+                {
+                    inputSwitchControl(KVM_DST_DEVICE_KVM1, KVM_SRC_DEVICE_NONE);
+                    g_kvm1DuCtrlFlag = false;
+                }
+
+                if(g_kvm2DuCtrlFlag)
+                {
+                    inputSwitchControl(KVM_DST_DEVICE_KVM2, KVM_SRC_DEVICE_NONE);
+                    g_kvm2DuCtrlFlag = false;
+                }
+                
             }
         }
         else
@@ -371,6 +415,30 @@ static void printCtrlIOInit(void)
     HalGPIOConfig(HAL_PRINTER_IO_C2, HAL_IO_OUTPUT);
 }
 
+static void switchBoardInit(void)
+{
+    KVMConfig_t config;
+    static bool inited = false;
+    uint8_t data[2];
+
+    if(!inited && SysTime() > 1000)
+    {
+        SysFlashRead(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
+        data[0] = KVM_DST_DEVICE_KVM1;
+        data[1] = config.dstConnect[0];
+        SwitchBoardDataSend(PROTO_CMD_DISPLAY_SET, data, 2);
+        HalWaitMs(20);
+        data[0] = KVM_DST_DEVICE_KVM2;
+        data[1] = config.dstConnect[1];
+        SwitchBoardDataSend(PROTO_CMD_DISPLAY_SET, data, 2);
+        HalWaitMs(20);
+        data[0] = config.soundConnect;
+        SwitchBoardDataSend(PROTO_CMD_SOUND_SET, data, 1);
+        HalWaitMs(20);
+        inited = true;
+    }
+}
+
 static void checkKVMConfigs(void)
 {
     KVMConfig_t config;
@@ -379,8 +447,16 @@ static void checkKVMConfigs(void)
     {
         setKVMFactoryConfig();
     }
+    else
+    {
+    
+        //hardware config
+        inputSwitchControl(KVM_DST_DEVICE_KVM1, (KVMSrcDevice_t)config.dstConnect[0]);
+        inputSwitchControl(KVM_DST_DEVICE_KVM2, (KVMSrcDevice_t)config.dstConnect[1]);
+        inputSwitchControl(KVM_DST_DEVICE_LCD, (KVMSrcDevice_t)config.dstConnect[2]);
+        setPrinterConnect((KVMSrcDevice_t)config.printerConnect);
+    }
 
-    //todo switch
 }
 
 void KVMInit(void)
@@ -395,6 +471,7 @@ void KVMInit(void)
 
 void KVMPoll(void)
 {
+    switchBoardInit();
     KeyboardPoll();
     SwitchBoardPoll();
     ProtocolPoll();

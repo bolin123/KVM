@@ -30,7 +30,7 @@ void HalFlashWrite(uint32_t addr, uint8_t *data, uint32_t len)
 
     if(data != 0)
 	{
-		for(j = len / 4; j > 0; j--)
+		for(j = len / 4; j >= 0; j--)
 		{
 			g_sun = 0;
 			if(j == 0)

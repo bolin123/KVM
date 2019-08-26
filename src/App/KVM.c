@@ -421,13 +421,13 @@ static void switchBoardInit(void)
     static bool inited = false;
     uint8_t data[2];
 
-    if(!inited && SysTime() > 1000)
+    if(!inited && SysTime() > 2000)
     {
         SysFlashRead(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
         data[0] = KVM_DST_DEVICE_KVM1;
         data[1] = config.dstConnect[0];
         SwitchBoardDataSend(PROTO_CMD_DISPLAY_SET, data, 2);
-        HalWaitMs(100);
+        HalWaitMs(200);
         data[0] = KVM_DST_DEVICE_KVM2;
         data[1] = config.dstConnect[1];
         SwitchBoardDataSend(PROTO_CMD_DISPLAY_SET, data, 2);

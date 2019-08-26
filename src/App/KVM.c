@@ -427,14 +427,14 @@ static void switchBoardInit(void)
         data[0] = KVM_DST_DEVICE_KVM1;
         data[1] = config.dstConnect[0];
         SwitchBoardDataSend(PROTO_CMD_DISPLAY_SET, data, 2);
-        HalWaitMs(20);
+        HalWaitMs(100);
         data[0] = KVM_DST_DEVICE_KVM2;
         data[1] = config.dstConnect[1];
         SwitchBoardDataSend(PROTO_CMD_DISPLAY_SET, data, 2);
-        HalWaitMs(20);
+        HalWaitMs(100);
         data[0] = config.soundConnect;
         SwitchBoardDataSend(PROTO_CMD_SOUND_SET, data, 1);
-        HalWaitMs(20);
+        HalWaitMs(100);
         inited = true;
     }
 }

@@ -106,7 +106,7 @@ void ProtocolRecvByte(ProtocolDev_t *dev, uint8_t data)
         }
         else if(dev->frameCount == dev->datalength + 3) //got a packet
         {
-            if(checkSum(&dev->frameBuff[2], dev->frameCount - 2) == data)
+            if(checkSum(&dev->frameBuff[2], dev->frameCount - 3) == data)
             {
                 Protocol_t *proto = (Protocol_t *)dev->frameBuff;
                 protocolParse(dev->devid, (ProtocolCmd_t)proto->cmd, (ProtocolDir_t)proto->dir, proto->data, proto->length - 3);

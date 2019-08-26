@@ -80,6 +80,7 @@ static void setPrinterConnect(KVMSrcDevice_t connect)
         HalGPIOSetLevel(HAL_PRINTER_IO_C1, 1);
         HalGPIOSetLevel(HAL_PRINTER_IO_C2, 0);
         break;
+    case KVM_SRC_DEVICE_DECODER:
     case KVM_SRC_DEVICE_CLIENT:
         HalGPIOSetLevel(HAL_PRINTER_IO_EN, 1);
         HalGPIOSetLevel(HAL_PRINTER_IO_C0, 0);
@@ -421,7 +422,7 @@ static void switchBoardInit(void)
     static bool inited = false;
     uint8_t data[2];
 
-    if(!inited && SysTime() > 2000)
+    if(!inited && SysTime() > 1000)
     {
         SysFlashRead(HAL_FLASH_ADDR_CONFIGS, (uint8_t *)&config, sizeof(KVMConfig_t));
         data[0] = KVM_DST_DEVICE_KVM1;

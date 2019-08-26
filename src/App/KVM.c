@@ -6,6 +6,9 @@
 
 #define KVM_CONFIG_VALID_FLAG 0xa5
 
+#define HAL_IO_LED  0x3b
+#define HAL_IO_IPMI 0x3f
+
 typedef enum
 {
     KVM_SET_RESULT_VALID = 0,
@@ -43,6 +46,7 @@ typedef struct
 static uint8_t g_avmErrcode = 1;
 static bool g_kvm1DuCtrlFlag = false;
 static bool g_kvm2DuCtrlFlag = false;
+static uint8_t g_ledIOLevel = 0;
 
 /*设置打印机连接*/
 static void setPrinterConnect(KVMSrcDevice_t connect)
@@ -460,8 +464,31 @@ static void checkKVMConfigs(void)
 
 }
 
+static void ledAndIPMIHandle(void)
+{
+    static SysTime_t lastTime;
+
+    if(SysTimeHasPast(lastTime, 500))
+    {
+        g_ledIOLevel = !g_ledIOLevel;
+        HalGPIOSetLevel(HAL_IO_LED, g_ledIOLevel);
+        HalGPIOSetLevel(HAL_IO_IPMI, g_ledIOLevel);
+        lastTime = SysTime();
+    }
+}
+
+static void ledIOInit(void)
+{
+    HalGPIOConfig(HAL_IO_LED, HAL_IO_OUTPUT); //pd11
+    HalGPIOConfig(HAL_IO_IPMI, HAL_IO_OUTPUT); //pd15
+    
+    HalGPIOSetLevel(HAL_IO_LED, g_ledIOLevel);
+    HalGPIOSetLevel(HAL_IO_IPMI, g_ledIOLevel);
+}
+
 void KVMInit(void)
 {
+    ledIOInit();
     printCtrlIOInit();
     checkKVMConfigs();	
     KeyboardInit(kvmKeyHandle);
@@ -478,5 +505,6 @@ void KVMPoll(void)
     ProtocolPoll();
     DisplayCtrlPoll();
     getAVMErrcode();
+    ledAndIPMIHandle();
 }
 

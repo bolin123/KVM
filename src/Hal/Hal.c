@@ -116,3 +116,4 @@ void HalInit(void)
 void HalPoll(void)
 {
 }
+

@@ -62,6 +62,7 @@ static void parseKey(Keyboard_t *kb, uint8_t *code)
 
 	if(!gotkey)
 	{
+	    kb->ctrlPressed = false;
 		return;
 	}
 
@@ -69,7 +70,7 @@ static void parseKey(Keyboard_t *kb, uint8_t *code)
 	{
     case KB_KEY_LCTRL:
     case KB_KEY_RCTRL:
-        if(kb->ctrlPressed && (!SysTimeHasPast(kb->lastCtrlTime, 1000)))
+        if(kb->ctrlPressed && (!SysTimeHasPast(kb->lastCtrlTime, 500)))
         {
             keyEvent(kb->id, KEYBOARD_KEY_DOUBLE_CTRL);
             kb->ctrlPressed = false;
